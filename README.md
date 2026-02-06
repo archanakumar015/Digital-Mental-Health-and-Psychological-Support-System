@@ -59,8 +59,6 @@ Existing research highlights:
 - Evolution from simple chatbots to **agentic and autonomous AI**
 - Need for proactive, continuous mental health monitoring systems
 
-(IEEE references included at the end)
-
 ---
 
 ## 🧩 Existing Methods
