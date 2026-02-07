@@ -30,6 +30,10 @@ EMOTION_MODEL = "j-hartmann/emotion-english-distilroberta-base"
 CHAT_MODEL = "microsoft/DialoGPT-medium"
 CHAT_FALLBACK_MODEL = "gpt2"
 
+# Gemini API Configuration
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
 # Logging Configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 

@@ -154,7 +154,7 @@ const Dashboard = () => {
       color: 'text-blue-600'
     },
     {
-      label: 'Days Active',
+      label: 'Registered Since',
       value: Math.floor((new Date() - new Date(user?.joinDate)) / (1000 * 60 * 60 * 24)) || 0,
       unit: 'days',
       icon: Calendar,

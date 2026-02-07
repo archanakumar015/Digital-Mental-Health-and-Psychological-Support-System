@@ -11,14 +11,11 @@ from quiz_service import QuizService
 # Try to import full AI service, fallback to lite version
 try:
     from ai_service import AIService
-    print("✓ Using full AI service with pretrained models")
+    print("✓ Using full AI services & Agentic AI is Monitoring")
 except ImportError as e:
     print(f"⚠️  Full AI dependencies not available: {e}")
     print("📦 Using lightweight AI service (keyword-based)")
     from ai_service_lite import AIService
-
-from quiz_service import QuizService
-
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -144,12 +141,64 @@ async def send_chat_message(
     # Use provided mood or detected emotion
     final_mood = chat_data.mood or detected_emotion
     
-    # Generate AI response (crisis detection is handled inside generate_response)
-    bot_response = ai_service.generate_response(
-        chat_data.message, 
-        detected_emotion, 
-        user_name
-    )
+    # === GEMINI INTEGRATION: Fetch latest mood for context ===
+    try:
+        mood_history = db.get_mood_history(user_id, limit=1)
+        current_mood = mood_history[0] if mood_history else None
+        
+        # Build mood context for Gemini
+        mood_context = {
+            'mood_label': current_mood['mood'] if current_mood else 'neutral',
+            'mood_score': emotion_scores.get(detected_emotion, 0.5),
+            'mood_timestamp': current_mood['timestamp'] if current_mood else 'N/A'
+        }
+        
+        # Import and initialize Gemini client
+        from gemini_client import GeminiClient
+        gemini_client = GeminiClient()
+        
+        # Generate response using Gemini API with mood context
+        bot_response, mood_update = gemini_client.generate_chat_response(
+            chat_data.message,
+            mood_context
+        )
+        
+        # Update mood if Gemini detected a mood change
+        if mood_update:
+            # Map Gemini mood categories to our mood labels
+            # Support both granular moods and legacy positive/neutral/negative
+            mood_mapping = {
+                # Granular moods (direct mapping)
+                'happy': 'happy',
+                'sad': 'sad',
+                'anxious': 'anxious',
+                'stressed': 'stressed',
+                'calm': 'calm',
+                'excited': 'excited',
+                'angry': 'angry',
+                'tired': 'tired',
+                'neutral': 'neutral',
+                # Legacy mappings (backward compatibility)
+                'positive': 'happy',
+                'negative': 'sad'
+            }
+            new_mood = mood_mapping.get(mood_update, 'neutral')
+            
+            # Save mood update to database
+            db.save_mood_entry(
+                user_id, 
+                new_mood, 
+                f"Updated from chat: {chat_data.message[:50]}..."
+            )
+            logger.info(f"Mood updated to '{new_mood}' based on Gemini analysis")
+            
+            # Update final_mood to reflect the change
+            final_mood = new_mood
+            
+    except Exception as e:
+        logger.error(f"Error in Gemini integration: {e}")
+        # Fallback to simple response if Gemini fails
+        bot_response = "I'm here to listen. Could you tell me more about how you're feeling?"
     
     # Save conversation to database with emotion data
     chat_id = db.save_chat_message(
@@ -162,8 +211,11 @@ async def send_chat_message(
     )
     
     # Save mood entry if emotion detected with high confidence
+    # (Only if mood wasn't already updated by Gemini)
     if detected_emotion != "neutral" and emotion_scores.get(detected_emotion, 0) > 0.4:
-        db.save_mood_entry(user_id, detected_emotion, f"Detected from chat: {chat_data.message[:100]}...")
+        # Check if we didn't already update mood via Gemini
+        if not (mood_update):
+            db.save_mood_entry(user_id, detected_emotion, f"Detected from chat: {chat_data.message[:100]}...")
     
     return {
         "id": chat_id,

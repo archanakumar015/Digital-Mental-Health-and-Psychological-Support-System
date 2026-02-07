@@ -50,7 +50,7 @@ const Footer = () => {
 
         <div className="border-t border-gray-800 mt-8 pt-8 text-center">
           <p className="text-gray-400">
-            © 2024 CuraCore. All rights reserved. Made with ❤️ for mental wellness.
+            © 2026 CuraCore. All rights reserved. Made with ❤️ for mental wellness.
           </p>
           <p className="text-sm text-gray-500 mt-2">
             If you're in crisis, please contact emergency services or a crisis hotline immediately.
